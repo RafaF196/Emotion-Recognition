@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+	<head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/> 
+		<title>Detecci&oacute Facial (Videos)</title>
+		<style>
+			@import url(https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
+
+			body {
+				font-family: 'Lato';
+				background-color: #f0f0f0;
+				margin: 0px;
+				max-width: 1150px;
+			}
+			
+            #mainarea {
+                position: absolute;
+				top: 0px;
+				left: 0px;
+                width: 705px;
+                height: 600px;
+            }
+            
+            #sidebar {
+                position: absolute;
+				top: 65px;
+				left: 705px;
+                width: 400px;
+                height: 550px;
+                background: #f5f5f5;
+                float: left;
+            }
+            
+			#overlay {
+				position: absolute;
+				top: 0px;
+				left: 0px;
+			}
+
+			#container {
+				position : relative;
+				width : 685px;
+				height : 400px;
+			}
+
+			#content {
+				margin-top : 20px;
+				margin-left : 20px;
+				margin-right : 20px;
+				margin-bottom : 20px;
+				max-width: 950px;
+			}
+			
+			#box1 {
+				margin-top : 20px;
+				margin-left : 20px;
+				margin-right : 20px;
+				border: 2px solid #000000;
+			}
+
+			#convergence {
+				display : inline;
+			}
+
+			h2 {
+				font-weight : 400;
+			}
+
+			.hide {
+				display : none;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="./js/libs/utils.js"></script>
+		<script src="./js/libs/dat.gui.min.js"></script>
+		<script src="../build/clmtrackr.js"></script>
+		<script src="./js/libs/Stats.js"></script>
+		<script src="./js/libs/jquery.min.js"></script>
+		<script src="./js/libs/jquery.imgareaselect.pack.js"></script>
+            <div id="mainarea">
+        		<div id="content">
+        			<h2>Detecci&oacute Facial en Videos</h2>
+        			<div id="container">
+        				<video id="videoel" width="675" height="380" preload="auto" playsinline>
+        				</video>
+        				<canvas id="overlay" width="675" height="380"></canvas>
+        			</div>
+        			<br/>
+	            </div>
+    		</div>
+    		<div id="sidebar">
+	            <div id="box1">
+    		        <div id="content">
+                         Nom del video*:
+                         <input type="textbox" id="imageN" style="position: relative; left: 37px"></input>
+                    </div>
+        			<div id="content">
+                         <input type="button" value="Carregar Video" onclick="loadVideo()" style="width: 315px; height: 25px;"></input>
+                    </div>
+                    <div id="content">
+                         <input type="checkbox" id="activeDL" style="width: 14px; height: 14px;">
+    			         Descarregar caracter&iacute;stiques
+                    </div>
+        			<div id="content">
+                         Nom fitxer(s):
+                         <input type="textbox" id="fileN" style="position: relative; left: 50px"></input>
+                    </div>
+                </div>
+    			<input type="button" value="Iniciar" onclick="startFaceTracker()" style="position: relative; left: 20px; top: 20px; width: 360px; height: 40px;"></input>
+                <div id="content">
+                    <br>
+                    * Busca en la carpeta "media/videos"<br>
+                    - Descarrega 5 fitxers per seg&oacuten<br>
+                </div>
+    		</div>
+			
+		<script>
+			var vid = document.getElementById('videoel');
+			vid.addEventListener('ended',myHandler,false);
+			var overlay = document.getElementById('overlay');
+			var overlayCC = overlay.getContext('2d');
+			var progBar = document.getElementById("myBar");
+			
+			var fileName = "";
+
+			var vid_source = "./media/others/mtest.mp4";
+			vid.src = vid_source;
+
+			var ctrack = new clm.tracker({scoreThreshold : 0.5});
+			ctrack.init();
+
+			var filePos = "";
+			var i = 1;
+			var intervalID = window.setInterval(myCallback, 200);
+			var allowInterval = false;
+			
+			function startFaceTracker() {
+                fileName = document.getElementById('fileN').value;
+
+                allowInterval = true;
+                vid.play();
+				ctrack.start(vid);
+				drawLoop();
+            }
+            
+            function loadVideo() {
+                vidName = document.getElementById('imageN').value;
+                vid_source = "./media/videos/" + vidName + ".mp4";
+                vid.src = vid_source;
+                i = 1;  
+            }
+            
+            function drawLoop() {
+				requestAnimFrame(drawLoop);
+				overlayCC.clearRect(0, 0, 675, 380);
+				if (ctrack.getCurrentPosition()) {
+					ctrack.draw(overlay);
+				}
+			}
+			
+			function positionLoop() {
+				requestAnimFrame(positionLoop);
+				var positions = ctrack.getCurrentPosition();
+				filePos = "";
+				if (positions) {
+					for (var p = 0; p < 71; p++) {
+						filePos += positions[p][0].toFixed(3) + " " + positions[p][1].toFixed(3) + "\n";
+					}
+					filePos += "\n";
+				}
+			}
+
+			// detect if tracker fails to find a face
+			document.addEventListener("clmtrackrNotFound", function(event) {
+				ctrack.stop();
+				alert("The tracking had problems with finding a face in this image.")
+			}, false);
+
+			// detect if tracker loses tracking of face
+			document.addEventListener("clmtrackrLost", function(event) {
+				ctrack.stop();
+				alert("The tracking had problems converging on a face in this image.")
+			}, false);
+			
+            var create = document.getElementById('create');	
+            
+            // download data
+            var textFile = null,
+            makeTextFile = function (text) {
+                var data = new Blob([text], {type: 'text/plain'});
+                if (textFile !== null) { window.URL.revokeObjectURL(textFile); }
+                textFile = window.URL.createObjectURL(data);
+                return textFile;
+            };
+            			
+			function downloadData() {
+                var link = document.createElement('a');
+                var fileNameI = fileName + " (" + i + ").txt";
+                link.setAttribute('download', fileNameI);
+                link.href = makeTextFile(filePos);
+                document.body.appendChild(link);
+                window.requestAnimationFrame(function () {
+                    var event = new MouseEvent('click');
+                    link.dispatchEvent(event);
+                    document.body.removeChild(link);
+      		    });
+            };
+            
+            function myCallback() {
+                positionLoop();         
+                if (allowInterval) {
+                    if (document.getElementById("activeDL").checked) { downloadData(); }
+                    i++;
+                }
+            }
+            
+            function myHandler(e) {
+                allowInterval = false;
+                ctrack.stop();
+                ctrack.reset();
+            }
+            				
+		</script>
+	</body>
+</html>

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+	<head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/> 
+		<title>Detecci&oacute Facial (Imatges)</title>
+		<style>
+			@import url(https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
+
+			body {
+				font-family: 'Lato';
+				background-color: #f0f0f0;
+				margin: 0px;
+				max-width: 1150px;
+			}
+			
+            #mainarea {
+                position: absolute;
+				top: 0px;
+				left: 0px;
+                width: 705px;
+                height: 600px;
+            }
+            
+            #sidebar {
+                position: absolute;
+				top: 65px;
+				left: 705px;
+                width: 400px;
+                height: 550px;
+                background: #f5f5f5;
+                float: left;
+            }
+            
+			#overlay {
+				position: absolute;
+				top: 0px;
+				left: 0px;
+			}
+
+			#container {
+				position : relative;
+				width : 685px;
+				height : 400px;
+			}
+
+			#content {
+				margin-top : 20px;
+				margin-left : 20px;
+				margin-right : 20px;
+				margin-bottom : 20px;
+				max-width: 950px;
+			}
+			
+			#box1 {
+				margin-top : 20px;
+				margin-left : 20px;
+				margin-right : 20px;
+				border: 2px solid #000000;
+			}
+
+			#convergence {
+				display : inline;
+			}
+			
+			#myProgress {
+                width: 100%;
+                background-color: grey;
+            }
+            
+            #myBar {
+                width: 0%;
+                height: 30px;
+                background-color: #4CAF50;
+                text-align: center;
+                line-height: 30px;
+                color: white; 
+            }
+
+			h2 {
+				font-weight : 400;
+			}
+
+			.hide {
+				display : none;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="./js/libs/utils.js"></script>
+		<script src="./js/libs/dat.gui.min.js"></script>
+		<script src="../build/clmtrackr.js"></script>
+		<script src="./js/libs/Stats.js"></script>
+		<script src="./js/libs/jquery.min.js"></script>
+		<script src="./js/libs/jquery.imgareaselect.pack.js"></script>
+            <div id="mainarea">
+        		<div id="content">
+        			<h2>Detecci&oacute Facial en Imatges</h2>
+        			<div id="container">
+        				<canvas id="image" width="675" height="380"></canvas>
+        				<canvas id="overlay" width="675" height="380"></canvas>
+        			</div>
+        			<br/>
+	            </div>
+    		</div>
+    		<div id="sidebar">
+	            <div id="box1">
+    		        <div id="content">
+                         Nom imatge(s)*:
+                         <input type="textbox" id="imageN" style="position: relative; left: 34px"></input>
+                    </div>
+        			<div id="content">
+                         N&uacute;mero d'imatges:
+                         <input type="textbox" id="imageNum" style="position: relative; left: 16px"></input>
+                    </div>
+                    <div id="content">
+                         <input type="checkbox" id="activeDL" style="width: 14px; height: 14px;">
+    			         Descarregar caracter&iacute;stiques
+                    </div>
+        			<div id="content">
+                         Nom fitxer(s):
+                         <input type="textbox" id="fileN" style="position: relative; left: 50px"></input>
+                    </div>
+                </div>
+    			<input type="button" value="Iniciar" onclick="startFaceTracker()" style="position: relative; left: 20px; top: 20px; width: 360px; height: 40px;"></input>
+                <div id="content">
+                    <br>
+                    <div id="myProgress">
+                         <div id="myBar">0%</div>
+                    </div>
+                </div>
+                <div id="content">
+                    *Busca en la carpeta "media/images"<br>
+                </div>
+    		</div>
+			
+		<script>
+			var cc = document.getElementById('image').getContext('2d');
+			var overlay = document.getElementById('overlay');
+			var overlayCC = overlay.getContext('2d');
+			var progBar = document.getElementById("myBar");
+			
+			var imageName = "";
+			var imageNumber = 0;
+			var fileName = "";
+
+			var img = new Image();
+			img.onload = function() { cc.drawImage(img,0,0,675,380); };
+			var image_source = "./media/others/mostra.jpeg";
+			img.src = image_source;
+
+			var ctrack = new clm.tracker({stopOnConvergence : true, scoreThreshold : 0.6});
+			ctrack.init();
+
+			var drawRequest;
+			var filePos = "";
+			var i = 1;
+			
+			function startFaceTracker() {
+                filePos = "";
+                i = 1;
+                
+                imageName = document.getElementById('imageN').value;
+                imageNumber = Number(document.getElementById('imageNum').value);
+                fileName = document.getElementById('fileN').value;
+                
+                if (imageName == "") { alert("No has escrit el nom de la imatge!"); }
+                else if (imageNumber == 0) { alert("No has escrit el numero d'imatges!"); }
+                else { animateClean(); }
+            }
+
+			function animateClean() {		    
+                img = new Image();
+				image_source = "./media/images/" + imageName + " (" + i + ").jpeg";
+				img.src = image_source;
+				img.onload = function() { cc.drawImage(img,0,0,675,380); };
+
+				ctrack.reset();
+				drawRequest;
+				filePos = "";
+				
+                ctrack.start(document.getElementById('image'));
+				drawLoop(); 
+			}
+			
+			function positionLoop() {
+				requestAnimFrame(positionLoop);
+				var positions = ctrack.getCurrentPosition();
+				filePos = "";
+				if (positions) {
+					for (var p = 0; p < 71; p++) {
+						filePos += positions[p][0].toFixed(3) + " " + positions[p][1].toFixed(3) + "\n";
+					}
+					filePos += "\n";
+				}
+			}
+
+			function drawLoop() {
+				drawRequest = requestAnimFrame(drawLoop);
+				overlayCC.clearRect(0, 0, 675, 380);
+				if (ctrack.getCurrentPosition()) {
+					ctrack.draw(overlay);
+				}
+			}
+
+			// detect if tracker fails to find a face
+			document.addEventListener("clmtrackrNotFound", function(event) {
+				ctrack.stop();
+				animateClean();
+				// alert("The tracking had problems with finding a face in this image.")
+			}, false);
+
+			// detect if tracker loses tracking of face
+			document.addEventListener("clmtrackrLost", function(event) {
+				ctrack.stop();
+				animateClean();
+				// alert("The tracking had problems converging on a face in this image.")
+			}, false);
+			
+            var create = document.getElementById('create');	
+            
+            // download data
+            var textFile = null,
+            makeTextFile = function (text) {
+                var data = new Blob([text], {type: 'text/plain'});
+                if (textFile !== null) { window.URL.revokeObjectURL(textFile); }
+                textFile = window.URL.createObjectURL(data);
+                return textFile;
+            };
+            			
+			function downloadData() {
+                var link = document.createElement('a');
+                var fileNameI = fileName + " (" + i + ").txt";
+                link.setAttribute('download', fileNameI);
+                link.href = makeTextFile(filePos);
+                document.body.appendChild(link);
+                window.requestAnimationFrame(function () {
+                    var event = new MouseEvent('click');
+                    link.dispatchEvent(event);
+                    document.body.removeChild(link);
+      		    });
+            };
+
+			// detect if tracker has converged
+			document.addEventListener("clmtrackrConverged", function(event) {
+                console.log(ctrack.getScore());
+				positionLoop();
+				if (document.getElementById("activeDL").checked) { downloadData(); }
+				cancelRequestAnimFrame(drawRequest);
+				
+				var progNum = (i/imageNumber*100).toFixed(0);
+				if (progNum > 100) { progNum = 100; }
+				progBar.style.width = progNum + '%'; 
+                progBar.innerHTML = progNum + '%';
+				
+				i++;
+				if (i <= imageNumber) { animateClean(); }
+			}, false);
+            				
+		</script>
+	</body>
+</html>
